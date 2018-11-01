@@ -1,0 +1,162 @@
+--Exercicio 1 para nota
+--Relogio com os displays
+--e controle de velocidade
+--de mudança dos valores
+--a partir dos botes
+
+LIBRARY IEEE;
+USE IEEE.STD_LOGIC_1164.ALL;
+USE IEEE.STD_LOGIC_UNSIGNED.ALL;
+
+
+--defindo entidade relogio
+ENTITY relogio IS 
+	PORT(
+	    --cristal de clock de 50Mhz
+		CLOCK_50 : IN STD_LOGIC;
+		--chave
+		key      : IN STD_LOGIC_VECTOR(3 DOWNTO 0);
+		--displays de 7 segmentos
+		hex2 	 : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+		hex3 	 : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+		hex4 	 : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+		hex5 	 : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+		hex6 	 : OUT STD_LOGIC_VECTOR(6 DOWNTO 0);
+		hex7 	 : OUT STD_LOGIC_VECTOR(6 DOWNTO 0)
+	);
+END relogio;
+
+--definindo pinos e tipos de sinais
+ARCHITECTURE arquiterura OF relogio IS
+	SIGNAL clock_one_second : STD_LOGIC;
+	SIGNAL display_code 	: STD_LOGIC_VECTOR(6 DOWNTO 0);
+	SIGNAL second0 			: INTEGER RANGE 0 TO 9 := 0;
+	SIGNAL second1 			: INTEGER RANGE 0 TO 5 := 0;
+	SIGNAL minute0 			: INTEGER RANGE 0 TO 9 := 0;
+	SIGNAL minute1 			: INTEGER RANGE 0 TO 5 := 0;
+	SIGNAL hour0   			: INTEGER RANGE 0 TO 9 := 0;
+	SIGNAL hour1   			: INTEGER RANGE 0 TO 2 := 0;
+	SIGNAL clock_range 		: INTEGER := 50000000;
+	SIGNAL key0 : STD_LOGIC;
+	SIGNAL key1 : STD_LOGIC;
+	
+	FUNCTION set_display_value(value_in : IN INTEGER) RETURN STD_LOGIC_VECTOR IS	
+		VARIABLE display : STD_LOGIC_VECTOR(6 DOWNTO 0);
+	BEGIN
+	    --uma especie de siwtch case para
+	    --alterar os valores do display
+		CASE value_in IS
+			WHEN 0 => display := "1000000";
+			WHEN 1 => display := "1111001";
+			WHEN 2 => display := "0100100"; 
+			WHEN 3 => display := "0110000";
+			WHEN 4 => display := "0011001";
+			WHEN 5 => display := "0010010";
+			WHEN 6 => display := "0000010";
+			WHEN 7 => display := "1111000";
+			WHEN 8 => display := "0000000";
+			WHEN 9 => display := "0010000";
+			--caso nao ocorra nenhum dos
+			--cenarios anterior
+			--receber zero
+			WHEN OTHERS => display := (OTHERS => '0');
+		END CASE;
+		--retorna o valor a ser exibido
+		RETURN STD_LOGIC_VECTOR(display);
+	END;
+	
+	BEGIN
+    --inicia o clock do cristal
+	PROCESS (CLOCK_50)
+	    --contador que armazenará 
+	    --até o valor de clock (50Mhz)
+		VARIABLE count : INTEGER RANGE 0 TO 50000000;
+	BEGIN
+	    --rising_edge =  sinal subindo
+		IF (rising_edge(CLOCK_50)) THEN
+			
+			IF (count < (clock_range / 2)) THEN
+				clock_one_second <= '0';
+				--incrementa o valor de count
+				count := count + 1;
+			ELSE
+				clock_one_second <= '1';
+				count := 0;
+			END IF;
+		END IF;
+	END PROCESS;
+	
+	--define a interação dos
+	--botoes com o relogio
+	PROCESS (key)
+	BEGIN
+		IF (key = "1110") THEN
+			clock_range <= 833333;
+		ELSIF (key = "1101") THEN
+			clock_range <= 13888;
+		ELSE
+			clock_range <= 50000000;
+		END IF;
+	END PROCESS;
+	
+	--processo que faz a validação
+	--e a varição dos displays
+	--de acordo com a logica
+	--do relogio 
+	PROCESS (clock_one_second)
+	BEGIN
+		IF (rising_edge(clock_one_second)) THEN
+			IF (second0 = 9) THEN
+				second0 <= 0;
+				IF (second1 = 5) THEN
+					second1 <= 0;
+					IF (minute0 = 9) THEN
+						minute0 <= 0;
+						IF (minute1 = 5) THEN
+							minute1 <= 0;
+							IF (hour0 = 9) THEN
+								hour0 <= 0;
+								IF (hour1 = 2) THEN
+									hour1 <= 0;
+								ELSE
+									hour1 <= hour1 + 1;
+								END IF;
+							ELSIF (hour0 = 3 AND hour1 = 2) THEN
+								hour0 <= 0;
+								hour1 <= 0;
+								minute0 <= 0;
+								minute1 <= 0;
+								second0 <= 0;
+								second1 <= 0;
+							ELSE
+								hour0 <= hour0 + 1;
+							END IF;
+						ELSE
+							minute1 <= minute1 + 1;
+						END IF;
+					ELSE
+						minute0 <= minute0 + 1;
+					END IF;
+				ELSE
+					second1 <= second1 + 1;
+				END IF;
+			ELSE
+				second0 <= second0 + 1;
+		END IF;
+	END IF;
+	END PROCESS;
+	
+	--mostra os valores de segundo (unidade)
+	hex2 <= set_display_value(second0);
+	--mostra os valores de segundo (dezena)
+	hex3 <= set_display_value(second1);
+	--mostra os valores de minuto (unidade)
+	hex4 <= set_display_value(minute0);
+	--mostra os valores de minuto (dezena)
+	hex5 <= set_display_value(minute1);
+	--mostra os valores de hora (unidade)
+	hex6 <= set_display_value(hour0);
+	--mostra os valores de hora (dezena)
+	hex7 <= set_display_value(hour1);
+	
+END arquiterura;
